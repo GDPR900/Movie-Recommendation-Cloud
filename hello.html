@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Recommender Cloud</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- D3.js and D3-Cloud for visualization -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-cloud/1.2.5/d3.layout.cloud.js"></script>
+    <style>
+        /* Custom font and basic styling */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .cloud-text:hover {
+            cursor: pointer;
+            text-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900">Movie Recommender Cloud</h1>
+            <p class="text-lg text-gray-600 mt-2">Find movies that match your taste and see the key themes in a word cloud.</p>
+        </header>
+
+        <!-- Search and Filter Controls -->
+        <div class="bg-white p-6 rounded-2xl shadow-lg mb-8 max-w-5xl mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                <div class="md:col-span-2">
+                    <label for="search-input" class="block text-sm font-medium text-gray-700 mb-1">Search by Title, Actor, Director, etc.</label>
+                    <input type="text" id="search-input" placeholder="e.g., 'Peter Jackson', 'Drama', 'Max'" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                </div>
+                <div>
+                    <label for="genre-select" class="block text-sm font-medium text-gray-700 mb-1">Genre</label>
+                    <select id="genre-select" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                        <!-- Options will be populated by JS -->
+                    </select>
+                </div>
+                <div>
+                    <label for="streaming-select" class="block text-sm font-medium text-gray-700 mb-1">Platform</label>
+                    <select id="streaming-select" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                        <!-- Options will be populated by JS -->
+                    </select>
+                </div>
+                <div>
+                    <label for="rating-select" class="block text-sm font-medium text-gray-700 mb-1">Content Rating</label>
+                    <select id="rating-select" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                        <!-- Options will be populated by JS -->
+                    </select>
+                </div>
+            </div>
+             <button id="search-button" class="mt-4 w-full bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-transform transform hover:scale-101">
+                Generate Suggestions
+            </button>
+        </div>
+        
+        <!-- Results Section -->
+        <div id="results-container" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Word Cloud Visualization -->
+            <div class="bg-white p-6 rounded-2xl shadow-lg">
+                <h2 class="text-2xl font-bold mb-4 text-center">Theme Cloud</h2>
+                <div id="word-cloud" class="w-full h-96 min-h-[400px] flex items-center justify-center">
+                     <p id="cloud-placeholder" class="text-gray-500">Your word cloud will appear here...</p>
+                </div>
+            </div>
+            <!-- Movie List -->
+            <div class="bg-white p-6 rounded-2xl shadow-lg">
+                 <h2 class="text-2xl font-bold mb-4 text-center">Suggested Movies</h2>
+                 <div id="movie-list" class="space-y-4 max-h-[450px] overflow-y-auto pr-2">
+                    <p class="text-gray-500 text-center">Movie suggestions will be listed here.</p>
+                 </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATASET ---
+        const movieData = [
+            // Original Data
+            { "title": "The Silence of the Lambs", "rating": 8.2, "director": "Jonathan Demme", "producer": "Edward Saxon", "streaming": "Max", "cast": ["Jodie Foster", "Anthony Hopkins"], "contentRating": "R", "genres": ["Thriller", "Crime"] },
+            { "title": "Pulp Fiction", "rating": 8.9, "director": "Quentin Tarantino", "producer": "Lawrence Bender", "streaming": "Max", "cast": ["John Travolta", "Samuel L. Jackson"], "contentRating": "R", "genres": ["Crime", "Drama"] },
+            { "title": "Inception", "rating": 8.8, "director": "Christopher Nolan", "producer": "Emma Thomas", "streaming": "Rent/Purchase", "cast": ["Leonardo DiCaprio", "Joseph Gordon-Levitt"], "contentRating": "PG-13", "genres": ["Action", "Sci-Fi", "Adventure"] },
+            { "title": "The Grand Budapest Hotel", "rating": 8.1, "director": "Wes Anderson", "producer": "Wes Anderson", "streaming": "Rent/Purchase", "cast": ["Ralph Fiennes", "F. Murray Abraham"], "contentRating": "R", "genres": ["Comedy", "Drama", "Adventure"] },
+            { "title": "The Shawshank Redemption", "rating": 9.3, "director": "Frank Darabont", "producer": "Niki Marvin", "streaming": "Rent/Purchase", "cast": ["Tim Robbins", "Morgan Freeman"], "contentRating": "R", "genres": ["Drama"] },
+            { "title": "Gladiator", "rating": 8.5, "director": "Ridley Scott", "producer": "Douglas Wick", "streaming": "Netflix, Paramount+", "cast": ["Russell Crowe", "Joaquin Phoenix"], "contentRating": "R", "genres": ["Action", "Drama", "Adventure"] },
+            { "title": "Titanic", "rating": 7.9, "director": "James Cameron", "producer": "James Cameron", "streaming": "Netflix, Paramount+", "cast": ["Leonardo DiCaprio", "Kate Winslet"], "contentRating": "PG-13", "genres": ["Romance", "Drama"] },
+            { "title": "The Departed", "rating": 8.5, "director": "Martin Scorsese", "producer": "Brad Pitt", "streaming": "Rent/Purchase", "cast": ["Leonardo DiCaprio", "Matt Damon"], "contentRating": "R", "genres": ["Crime", "Thriller", "Drama"] },
+            { "title": "Interstellar", "rating": 8.6, "director": "Christopher Nolan", "producer": "Emma Thomas", "streaming": "Paramount+, Prime Video", "cast": ["Matthew McConaughey", "Anne Hathaway"], "contentRating": "PG-13", "genres": ["Sci-Fi", "Drama", "Adventure"] },
+            { "title": "La La Land", "rating": 8.0, "director": "Damien Chazelle", "producer": "Fred Berger", "streaming": "Netflix", "cast": ["Ryan Gosling", "Emma Stone"], "contentRating": "PG-13", "genres": ["Musical", "Romance", "Comedy"] },
+            { "title": "Echoes of Tomorrow", "rating": 7.5, "director": "Ava DuVernay", "producer": "Kevin Feige", "streaming": "Disney+", "cast": ["Zendaya", "John David Washington"], "contentRating": "PG-13", "genres": ["Sci-Fi", "Thriller"] },
+            { "title": "The Crimson Cipher", "rating": 8.1, "director": "Denis Villeneuve", "producer": "Megan Ellison", "streaming": "Max", "cast": ["Timothée Chalamet", "Rebecca Ferguson"], "contentRating": "R", "genres": ["Mystery", "Crime"] },
+            { "title": "Midnight Serenade", "rating": 6.8, "director": "Greta Gerwig", "producer": "Dede Gardner", "streaming": "Netflix", "cast": ["Saoirse Ronan", "Florence Pugh"], "contentRating": "PG-13", "genres": ["Romance", "Drama"] },
+            { "title": "Galactic Drift", "rating": 7.9, "director": "Taika Waititi", "producer": "Kathleen Kennedy", "streaming": "Disney+", "cast": ["Chris Hemsworth", "Tessa Thompson"], "contentRating": "PG-13", "genres": ["Sci-Fi", "Action", "Comedy"] },
+            { "title": "Shadows of the Past", "rating": 8.5, "director": "Jordan Peele", "producer": "Jason Blum", "streaming": "Prime Video", "cast": ["Daniel Kaluuya", "Keke Palmer"], "contentRating": "R", "genres": ["Horror", "Thriller"] },
+            { "title": "The Last Oracle", "rating": 6.5, "director": "Chloé Zhao", "producer": "Kevin Feige", "streaming": "Disney+", "cast": ["Gemma Chan", "Richard Madden"], "contentRating": "PG-13", "genres": ["Fantasy", "Adventure"] },
+            { "title": "City of Whispers", "rating": 7.2, "director": "Bong Joon-ho", "producer": "Kwak Sin-ae", "streaming": "Hulu", "cast": ["Song Kang-ho", "Lee Sun-kyun"], "contentRating": "R", "genres": ["Drama", "Thriller"] },
+            { "title": "River of Secrets", "rating": 6.9, "director": "Ryan Coogler", "producer": "Charles Roven", "streaming": "Max", "cast": ["Michael B. Jordan", "Lupita Nyong'o"], "contentRating": "PG-13", "genres": ["Action", "Adventure"] },
+            { "title": "Forgotten Realm", "rating": 8.3, "director": "Peter Jackson", "producer": "Fran Walsh", "streaming": "Max", "cast": ["Elijah Wood", "Ian McKellen"], "contentRating": "PG-13", "genres": ["Fantasy", "Adventure"] },
+            { "title": "Starlight Parade", "rating": 7.1, "director": "Wes Anderson", "producer": "Scott Rudin", "streaming": "Rent/Purchase", "cast": ["Bill Murray", "Tilda Swinton"], "contentRating": "PG", "genres": ["Comedy", "Family"] },
+            { "title": "The Gilded Cage", "rating": 8.0, "director": "Martin Scorsese", "producer": "Emma Tillinger Koskoff", "streaming": "Netflix", "cast": ["Robert De Niro", "Al Pacino"], "contentRating": "R", "genres": ["Crime", "Drama"] },
+            { "title": "Neon Tides", "rating": 6.7, "director": "Denis Villeneuve", "producer": "Andrew A. Kosove", "streaming": "Max", "cast": ["Ryan Gosling", "Ana de Armas"], "contentRating": "R", "genres": ["Sci-Fi", "Action"] },
+            { "title": "Project Chimera", "rating": 7.8, "director": "James Cameron", "producer": "Jon Landau", "streaming": "Disney+", "cast": ["Sam Worthington", "Zoe Saldana"], "contentRating": "PG-13", "genres": ["Sci-Fi", "Adventure"] },
+            { "title": "Winter's Oath", "rating": 8.4, "director": "Ridley Scott", "producer": "Walter F. Parkes", "streaming": "Paramount+", "cast": ["Joaquin Phoenix", "Vanessa Kirby"], "contentRating": "R", "genres": ["Drama", "History"] },
+            { "title": "The Alchemist's Heir", "rating": 7.0, "director": "Guillermo del Toro", "producer": "J. Miles Dale", "streaming": "Netflix", "cast": ["Bradley Cooper", "Cate Blanchett"], "contentRating": "R", "genres": ["Fantasy", "Mystery", "Thriller"] },
+            { "title": "Solaris Rising", "rating": 8.2, "director": "Christopher Nolan", "producer": "Emma Thomas", "streaming": "Prime Video", "cast": ["John David Washington", "Robert Pattinson"], "contentRating": "PG-13", "genres": ["Sci-Fi", "Action"] },
+            { "title": "Cobalt Express", "rating": 7.3, "director": "David Fincher", "producer": "Ceán Chaffin", "streaming": "Netflix", "cast": ["Ben Affleck", "Rosamund Pike"], "contentRating": "R", "genres": ["Thriller", "Mystery"] },
+            { "title": "The Jade Peacock", "rating": 6.9, "director": "Ang Lee", "producer": "James Schamus", "streaming": "Hulu", "cast": ["Michelle Yeoh", "Chow Yun-fat"], "contentRating": "PG-13", "genres": ["Action", "Adventure", "Romance"] },
+            { "title": "Crimson Peak", "rating": 7.4, "director": "Guillermo del Toro", "producer": "Thomas Tull", "streaming": "Netflix", "cast": ["Mia Wasikowska", "Tom Hiddleston"], "contentRating": "R", "genres": ["Horror", "Romance", "Fantasy"] },
+            { "title": "Dune", "rating": 8.3, "director": "Denis Villeneuve", "producer": "Mary Parent", "streaming": "Max", "cast": ["Timothée Chalamet", "Zendaya"], "contentRating": "PG-13", "genres": ["Sci-Fi", "Adventure", "Drama"] },
+            { "title": "Parasite", "rating": 8.6, "director": "Bong Joon-ho", "producer": "Kwak Sin-ae", "streaming": "Hulu", "cast": ["Song Kang-ho", "Choi Woo-shik"], "contentRating": "R", "genres": ["Thriller", "Comedy", "Drama"] },
+            { "title": "Jojo Rabbit", "rating": 7.9, "director": "Taika Waititi", "producer": "Carthew Neal", "streaming": "Rent/Purchase", "cast": ["Roman Griffin Davis", "Scarlett Johansson"], "contentRating": "PG-13", "genres": ["Comedy", "Drama", "War"] },
+            { "title": "Blade Runner 2049", "rating": 8.0, "director": "Denis Villeneuve", "producer": "Andrew A. Kosove", "streaming": "Netflix", "cast": ["Ryan Gosling", "Harrison Ford"], "contentRating": "R", "genres": ["Sci-Fi", "Action", "Mystery"] },
+            { "title": "Once Upon a Time in Hollywood", "rating": 7.6, "director": "Quentin Tarantino", "producer": "David Heyman", "streaming": "Hulu", "cast": ["Leonardo DiCaprio", "Brad Pitt"], "contentRating": "R", "genres": ["Comedy", "Drama"] },
+            { "title": "The Shape of Water", "rating": 7.3, "director": "Guillermo del Toro", "producer": "J. Miles Dale", "streaming": "Hulu", "cast": ["Sally Hawkins", "Octavia Spencer"], "contentRating": "R", "genres": ["Fantasy", "Romance", "Drama"] },
+            { "title": "Mad Max: Fury Road", "rating": 8.1, "director": "George Miller", "producer": "George Miller", "streaming": "Max", "cast": ["Tom Hardy", "Charlize Theron"], "contentRating": "R", "genres": ["Action", "Sci-Fi", "Adventure"] },
+            { "title": "Get Out", "rating": 7.7, "director": "Jordan Peele", "producer": "Jason Blum", "streaming": "Prime Video", "cast": ["Daniel Kaluuya", "Allison Williams"], "contentRating": "R", "genres": ["Horror", "Mystery", "Thriller"] },
+            { "title": "Spider-Man: Into the Spider-Verse", "rating": 8.4, "director": "Bob Persichetti", "producer": "Avi Arad", "streaming": "Disney+", "cast": ["Shameik Moore", "Jake Johnson"], "contentRating": "PG", "genres": ["Animation", "Action", "Adventure"] },
+            { "title": "Arrival", "rating": 7.9, "director": "Denis Villeneuve", "producer": "Shawn Levy", "streaming": "Paramount+", "cast": ["Amy Adams", "Jeremy Renner"], "contentRating": "PG-13", "genres": ["Sci-Fi", "Drama", "Mystery"] },
+            { "title": "Joker", "rating": 8.4, "director": "Todd Phillips", "producer": "Bradley Cooper", "streaming": "Max", "cast": ["Joaquin Phoenix", "Robert De Niro"], "contentRating": "R", "genres": ["Crime", "Drama", "Thriller"] },
+        ].map(movie => {
+            // Auto-generate keywords for the word cloud from the available data
+            movie.keywords = [
+                movie.director, 
+                movie.producer,
+                ...movie.cast,
+                ...movie.genres,
+                ...movie.streaming.split(/, |\/|\+/).map(s => s.trim()).filter(Boolean)
+            ].filter((v, i, a) => a.indexOf(v) === i); // Keep only unique keywords
+            return movie;
+        });
+
+
+        // --- GLOBAL VARIABLES ---
+        const searchInput = document.getElementById('search-input');
+        const genreSelect = document.getElementById('genre-select');
+        const streamingSelect = document.getElementById('streaming-select');
+        const ratingSelect = document.getElementById('rating-select');
+        const searchButton = document.getElementById('search-button');
+        const cloudContainer = document.getElementById('word-cloud');
+        const movieListContainer = document.getElementById('movie-list');
+        const cloudPlaceholder = document.getElementById('cloud-placeholder');
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            populateGenres();
+            populateStreamingPlatforms();
+            populateContentRatings();
+            handleSearch(); // Perform an initial search to populate the page
+            searchButton.addEventListener('click', handleSearch);
+            searchInput.addEventListener('keyup', (event) => {
+                if (event.key === 'Enter') {
+                    handleSearch();
+                }
+            });
+             ratingSelect.addEventListener('change', handleSearch);
+             genreSelect.addEventListener('change', handleSearch);
+             streamingSelect.addEventListener('change', handleSearch);
+        });
+
+        // --- FUNCTIONS ---
+
+        /**
+         * Populates the genre dropdown from the movie dataset.
+         */
+        function populateGenres() {
+            const genres = new Set();
+            movieData.forEach(movie => {
+                movie.genres.forEach(genre => genres.add(genre));
+            });
+            
+            genreSelect.innerHTML = '<option value="All">All Genres</option>';
+            [...genres].sort().forEach(genre => {
+                const option = document.createElement('option');
+                option.value = genre;
+                option.textContent = genre;
+                genreSelect.appendChild(option);
+            });
+        }
+
+        /**
+         * Populates the streaming platform dropdown from the movie dataset.
+         */
+        function populateStreamingPlatforms() {
+            const platforms = new Set();
+            movieData.forEach(movie => {
+                movie.streaming.split(/, |\/|\+/).map(s => s.trim()).filter(Boolean).forEach(platform => {
+                    platforms.add(platform);
+                });
+            });
+
+            streamingSelect.innerHTML = '<option value="All">All Platforms</option>';
+            [...platforms].sort().forEach(platform => {
+                const option = document.createElement('option');
+                option.value = platform;
+                option.textContent = platform;
+                streamingSelect.appendChild(option);
+            });
+        }
+
+        /**
+         * Populates the content rating dropdown from the movie dataset.
+         */
+        function populateContentRatings() {
+            const ratings = new Set(movieData.map(movie => movie.contentRating));
+            
+            ratingSelect.innerHTML = '<option value="All">All Ratings</option>';
+            [...ratings].sort().forEach(rating => {
+                const option = document.createElement('option');
+                option.value = rating;
+                option.textContent = rating;
+                ratingSelect.appendChild(option);
+            });
+        }
+        
+        /**
+         * Main function to handle the search and update the UI.
+         */
+        function handleSearch() {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            const selectedGenre = genreSelect.value;
+            const selectedPlatform = streamingSelect.value;
+            const selectedRating = ratingSelect.value;
+
+            const filteredMovies = movieData.filter(movie => {
+                const genreMatch = selectedGenre === 'All' || movie.genres.includes(selectedGenre);
+                const platformMatch = selectedPlatform === 'All' || movie.streaming.includes(selectedPlatform);
+                const ratingMatch = selectedRating === 'All' || movie.contentRating === selectedRating;
+                
+                const searchMatch = !searchTerm || [
+                    movie.title,
+                    ...movie.keywords,
+                    movie.director,
+                    movie.producer,
+                    ...movie.cast
+                ].some(text => text.toLowerCase().includes(searchTerm));
+
+                return genreMatch && platformMatch && ratingMatch && searchMatch;
+            });
+            
+            updateMovieList(filteredMovies);
+            generateWordCloud(filteredMovies);
+        }
+
+        /**
+         * Updates the list of suggested movies in the UI.
+         * @param {Array} movies - The array of movie objects to display.
+         */
+        function updateMovieList(movies) {
+            movieListContainer.innerHTML = ''; // Clear previous results
+            if (movies.length === 0) {
+                movieListContainer.innerHTML = '<p class="text-gray-500 text-center">No movies found matching your criteria. Try a different search!</p>';
+                return;
+            }
+
+            movies.forEach(movie => {
+                const movieElement = document.createElement('div');
+                movieElement.className = 'p-4 border rounded-lg bg-gray-50 hover:bg-gray-100 transition flex justify-between items-center';
+                
+                // Movie details
+                const details = `
+                    <div>
+                        <h3 class="font-bold text-lg text-indigo-700">${movie.title} <span class="text-sm font-medium text-gray-500 ml-2">(${movie.rating}/10)</span></h3>
+                        <p class="text-sm text-gray-600 mb-1"><strong>Genres:</strong> ${movie.genres.join(', ')}</p>
+                        <p class="text-sm text-gray-600 mb-1"><strong>Director:</strong> ${movie.director}</p>
+                        <p class="text-sm text-gray-500"><strong>Available on:</strong> ${movie.streaming}</p>
+                    </div>`;
+
+                // Like button
+                const likeButton = document.createElement('button');
+                likeButton.textContent = 'Like 👍';
+                likeButton.className = 'bg-green-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600 transition-transform transform hover:scale-105';
+                likeButton.onclick = () => {
+                   console.log("Liked movie:", movie.title);
+                };
+
+                movieElement.innerHTML = details;
+                movieElement.appendChild(likeButton);
+
+                movieListContainer.appendChild(movieElement);
+            });
+        }
+        
+        /**
+         * Generates and displays the word cloud from movie keywords.
+         * @param {Array} movies - The array of movie objects to source words from.
+         */
+        function generateWordCloud(movies) {
+            cloudContainer.innerHTML = ''; // Clear previous cloud
+            cloudPlaceholder.style.display = 'none';
+
+            if (movies.length === 0) {
+                 cloudContainer.innerHTML = '<p class="text-gray-500">No themes to display.</p>';
+                 return;
+            }
+
+            const wordCounts = {};
+            movies.forEach(movie => {
+                movie.keywords.forEach(keyword => {
+                    wordCounts[keyword] = (wordCounts[keyword] || 0) + 1;
+                });
+            });
+
+            const words = Object.entries(wordCounts).map(([text, size]) => ({ text, size }));
+
+            const [width, height] = [cloudContainer.clientWidth, cloudContainer.clientHeight];
+            
+            if (width === 0 || height === 0) {
+                cloudContainer.innerHTML = '<p class="text-gray-500">Please make the window larger to display the cloud.</p>';
+                return;
+            }
+
+            const layout = d3.layout.cloud()
+                .size([width, height])
+                .words(words.map(d => ({ text: d.text, size: 10 + d.size * 15 }))) // Scale font size
+                .padding(5)
+                .rotate(() => (~~(Math.random() * 2)) * -30) // Random rotation (0 or -30 deg)
+                .font("Impact")
+                .fontSize(d => d.size)
+                .on("end", draw);
+
+            layout.start();
+
+            function draw(words) {
+                const svg = d3.select(cloudContainer).append("svg")
+                    .attr("width", layout.size()[0])
+                    .attr("height", layout.size()[1])
+                    .append("g")
+                    .attr("transform", `translate(${layout.size()[0] / 2},${layout.size()[1] / 2})`);
+
+                const color = d3.scaleOrdinal(d3.schemeCategory10);
+
+                svg.selectAll("text")
+                    .data(words)
+                    .enter().append("text")
+                    .attr("class", "cloud-text")
+                    .style("font-size", d => `${d.size}px`)
+                    .style("font-family", "Impact")
+                    .style("fill", (d, i) => color(i))
+                    .attr("text-anchor", "middle")
+                    .attr("transform", d => `translate(${[d.x, d.y]})rotate(${d.rotate})`)
+                    .text(d => d.text)
+                    .on("click", (event, d) => {
+                        searchInput.value = d.text;
+                        handleSearch();
+                    });
+            }
+        }
+    </script>
+</body>
+</html>
