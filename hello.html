@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Movie Recommender Cloud</title>
-    <!-- Tailwind CSS for styling -->
+    
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- D3.js and D3-Cloud for visualization -->
+    
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-cloud/1.2.5/d3.layout.cloud.js"></script>
     <style>
-        /* Custom font and basic styling */
+       
         body {
             font-family: 'Inter', sans-serif;
         }
@@ -28,7 +28,7 @@
             <p class="text-lg text-gray-600 mt-2">Find movies that match your taste and see the key themes in a word cloud.</p>
         </header>
 
-        <!-- Search and Filter Controls -->
+        
         <div class="bg-white p-6 rounded-2xl shadow-lg mb-8 max-w-5xl mx-auto">
             <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                 <div class="md:col-span-2">
@@ -38,19 +38,19 @@
                 <div>
                     <label for="genre-select" class="block text-sm font-medium text-gray-700 mb-1">Genre</label>
                     <select id="genre-select" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
-                        <!-- Options will be populated by JS -->
+                        
                     </select>
                 </div>
                 <div>
                     <label for="streaming-select" class="block text-sm font-medium text-gray-700 mb-1">Platform</label>
                     <select id="streaming-select" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
-                        <!-- Options will be populated by JS -->
+                       
                     </select>
                 </div>
                 <div>
                     <label for="rating-select" class="block text-sm font-medium text-gray-700 mb-1">Content Rating</label>
                     <select id="rating-select" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
-                        <!-- Options will be populated by JS -->
+                        
                     </select>
                 </div>
             </div>
@@ -59,16 +59,16 @@
             </button>
         </div>
         
-        <!-- Results Section -->
+        
         <div id="results-container" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <!-- Word Cloud Visualization -->
+            
             <div class="bg-white p-6 rounded-2xl shadow-lg">
                 <h2 class="text-2xl font-bold mb-4 text-center">Theme Cloud</h2>
                 <div id="word-cloud" class="w-full h-96 min-h-[400px] flex items-center justify-center">
                      <p id="cloud-placeholder" class="text-gray-500">Your word cloud will appear here...</p>
                 </div>
             </div>
-            <!-- Movie List -->
+            
             <div class="bg-white p-6 rounded-2xl shadow-lg">
                  <h2 class="text-2xl font-bold mb-4 text-center">Suggested Movies</h2>
                  <div id="movie-list" class="space-y-4 max-h-[450px] overflow-y-auto pr-2">
@@ -123,7 +123,7 @@
             { "title": "Arrival", "rating": 7.9, "director": "Denis Villeneuve", "producer": "Shawn Levy", "streaming": "Paramount+", "cast": ["Amy Adams", "Jeremy Renner"], "contentRating": "PG-13", "genres": ["Sci-Fi", "Drama", "Mystery"] },
             { "title": "Joker", "rating": 8.4, "director": "Todd Phillips", "producer": "Bradley Cooper", "streaming": "Max", "cast": ["Joaquin Phoenix", "Robert De Niro"], "contentRating": "R", "genres": ["Crime", "Drama", "Thriller"] },
         ].map(movie => {
-            // Auto-generate keywords for the word cloud from the available data
+            
             movie.keywords = [
                 movie.director, 
                 movie.producer,
@@ -162,11 +162,7 @@
              streamingSelect.addEventListener('change', handleSearch);
         });
 
-        // --- FUNCTIONS ---
-
-        /**
-         * Populates the genre dropdown from the movie dataset.
-         */
+       
         function populateGenres() {
             const genres = new Set();
             movieData.forEach(movie => {
@@ -183,7 +179,7 @@
         }
 
         /**
-         * Populates the streaming platform dropdown from the movie dataset.
+         * streaming platform.
          */
         function populateStreamingPlatforms() {
             const platforms = new Set();
@@ -203,7 +199,7 @@
         }
 
         /**
-         * Populates the content rating dropdown from the movie dataset.
+         * rating .
          */
         function populateContentRatings() {
             const ratings = new Set(movieData.map(movie => movie.contentRating));
@@ -218,7 +214,7 @@
         }
         
         /**
-         * Main function to handle the search and update the UI.
+         * Main function .
          */
         function handleSearch() {
             const searchTerm = searchInput.value.toLowerCase().trim();
@@ -246,10 +242,7 @@
             generateWordCloud(filteredMovies);
         }
 
-        /**
-         * Updates the list of suggested movies in the UI.
-         * @param {Array} movies - The array of movie objects to display.
-         */
+        
         function updateMovieList(movies) {
             movieListContainer.innerHTML = ''; // Clear previous results
             if (movies.length === 0) {
@@ -270,7 +263,7 @@
                         <p class="text-sm text-gray-500"><strong>Available on:</strong> ${movie.streaming}</p>
                     </div>`;
 
-                // Like button
+                // Like 
                 const likeButton = document.createElement('button');
                 likeButton.textContent = 'Like 👍';
                 likeButton.className = 'bg-green-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600 transition-transform transform hover:scale-105';
